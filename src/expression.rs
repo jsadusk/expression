@@ -4,6 +4,7 @@ use worm_cell::{WormCell, WormCellReader};
 #[derive(Debug, Copy, Clone)]
 pub struct Term(pub(crate) usize);
 
+#[derive(Debug, Copy, Clone)]
 pub struct TypedTerm<ResultType> {
     pub(crate) term: Term,
     pub(crate) result: WormCellReader<ResultType>
