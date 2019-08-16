@@ -2,6 +2,9 @@ use worm_cell::WormCell;
 
 use crate::error::*;
 use crate::expression::*;
+use crate::list::*;
+
+use std::marker::PhantomData;
 
 pub struct Engine<'a> {
      terms: Vec<Box<dyn ExpressionCache + 'a>>
@@ -41,5 +44,9 @@ impl<'a> Engine<'a> {
 
         TypedTerm { term: Term(self.terms.len() - 1),
                     result: term_result}
+    }
+
+    pub fn random_list_term<ElementType: 'a, ListExpr: RandomListExpression<ElementType> + 'a>(&mut self, expr: ListExpr) -> TypedTerm<Vec<ElementType>> {
+        self.term(RandomListExpressionWrapper::<ElementType, ListExpr>(expr, PhantomData::<ElementType>::default()))
     }
 }

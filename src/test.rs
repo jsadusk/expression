@@ -7,8 +7,8 @@ mod tests {
     fn two_term() {
         let mut engine = Engine::new();
         
-        let term1 = engine.term(Value::<i32>{ val: 5 });
-        let term2 = engine.term(Coefficient::<i32>{ operand: term1, factor: 2 });
+        let term1 = engine.term(Value{ val: 5 });
+        let term2 = engine.term(Coefficient{ operand: term1, factor: 2 });
         assert_eq!(*engine.eval(&term2).unwrap(), 10);
 
         println!("OK");
@@ -18,10 +18,10 @@ mod tests {
     fn three_term_triangle() {
         let mut engine = Engine::new();
 
-        let val_a = engine.term(Value::<i32>{ val: 5 });
-        let val_b = engine.term(Value::<i32>{ val: 4 });
+        let val_a = engine.term(Value{ val: 5 });
+        let val_b = engine.term(Value{ val: 4 });
 
-        let mult = engine.term(Multiply::<i32>{ a: val_a, b: val_b });
+        let mult = engine.term(Multiply{ a: val_a, b: val_b });
 
         assert_eq!(*engine.eval(&mult).unwrap(), 20);
     }
@@ -30,11 +30,11 @@ mod tests {
     fn three_term_linear() {
         let mut engine = Engine::new();
 
-        let val = engine.term(Value::<i32>{ val: 5 });
-        let coef_a = engine.term(Coefficient::<i32>{ operand: val, factor: 4 });
+        let val = engine.term(Value{ val: 5 });
+        let coef_a = engine.term(Coefficient{ operand: val, factor: 4 });
 
-        let coef_b = engine.term(Coefficient::<i32>{ operand: coef_a,
-                                                     factor: 6 });
+        let coef_b = engine.term(Coefficient{ operand: coef_a,
+                                              factor: 6 });
 
         assert_eq!(*engine.eval(&coef_b).unwrap(), 120);
     }
@@ -43,14 +43,26 @@ mod tests {
     fn four_term_diamond() {
         let mut engine = Engine::new();
 
-        let val = engine.term(Value::<i32>{ val: 5 });
-        let coef_a = engine.term(Coefficient::<i32>{ operand: val, factor: 4 });
+        let val = engine.term(Value{ val: 5 });
+        let coef_a = engine.term(Coefficient{ operand: val, factor: 4 });
 
-        let coef_b = engine.term(Coefficient::<i32>{ operand: val,
+        let coef_b = engine.term(Coefficient{ operand: val,
                                                      factor: 6 });
-        let mult = engine.term(Multiply::<i32>{ a: coef_a, b: coef_b });
+        let mult = engine.term(Multiply{ a: coef_a, b: coef_b });
 
         assert_eq!(*engine.eval(&mult).unwrap(), 600);
     }
-    
+
+    #[test]
+    fn list_expr() {
+        let mut engine = Engine::new();
+        
+        let list = engine.term(Value { val: vec!(0, 1, 2, 3) });
+        let val = engine.term(Value { val: 5 });
+
+        let list_mul = engine.random_list_term(MultiplyListScalar{ l: list,
+                                                                   c: val});
+
+        assert_eq!(*engine.eval(&list_mul).unwrap(), vec!(0, 5, 10, 15));
+    }
 }
