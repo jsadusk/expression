@@ -6,7 +6,7 @@ mod tests {
     #[test]
     fn two_term() {
         let mut engine = Engine::new();
-        
+
         let term1 = engine.term(Value{ val: 5 });
         let term2 = engine.term(Coefficient{ operand: term1, factor: 2 });
         assert_eq!(*engine.eval(&term2).unwrap(), 10);
@@ -54,9 +54,9 @@ mod tests {
     }
 
     #[test]
-    fn list_expr() {
+    fn random_list_expr() {
         let mut engine = Engine::new();
-        
+
         let list = engine.term(Value { val: vec!(0, 1, 2, 3) });
         let val = engine.term(Value { val: 5 });
 
@@ -65,4 +65,20 @@ mod tests {
 
         assert_eq!(*engine.eval(&list_mul).unwrap(), vec!(0, 5, 10, 15));
     }
+
+    #[test]
+    fn sequential_list_expr() {
+        let mut engine = Engine::new();
+
+        let start = engine.term(Value { val: 0 });
+        let end = engine.term(Value { val: 10 });
+        let inc = engine.term(Value { val: 2 });
+
+        let count = engine.sequential_list_term(CountList{ start: start,
+                                                           end: end,
+                                                           inc: inc});
+
+        assert_eq!(*engine.eval(&count).unwrap(), vec!(0, 2, 4, 6, 8, 10));
+    }
+
 }
