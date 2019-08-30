@@ -43,7 +43,7 @@ impl<ResultType, Expr: Expression<ResultType>> ExpressionCache for TypedExpressi
  }
 
 
-impl<'a, ResultType> TypedTerm<ResultType> {
+impl<ResultType> TypedTerm<ResultType> {
     pub fn get(&self) -> ExpressionResult<&ResultType> {
         self.result.get().map_err(ExpressionError::GetNotCalculated)
     }
