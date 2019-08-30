@@ -1,6 +1,8 @@
 use crate::error::*;
 use worm_cell::{WormCell, WormCellReader};
 
+use std::ops::Deref;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Term(pub(crate) usize);
 
@@ -50,5 +52,13 @@ impl<ResultType> TypedTerm<ResultType> {
 
     pub fn term(&self) -> Term {
         self.term
+    }
+}
+
+impl<ResultType> Deref for TypedTerm<ResultType> {
+    type Target = ResultType;
+
+    fn deref(&self) -> &Self::Target {
+        self.get().unwrap()
     }
 }

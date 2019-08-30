@@ -27,7 +27,7 @@ impl<ValueType: Mul + Copy> Expression<ValueType::Output> for Coefficient<ValueT
     }
 
     fn eval(&self) -> ExpressionResult<ValueType::Output> {
-        let result = *self.operand.get()? * self.factor;
+        let result = *self.operand * self.factor;
         Ok(result)
     }
 }
@@ -43,7 +43,7 @@ impl<ValueType: Mul + Copy> Expression<ValueType::Output> for Multiply<ValueType
     }
 
     fn eval(&self) -> ExpressionResult<ValueType::Output> {
-        Ok(*self.a.get()? * *self.b.get()?)
+        Ok(*self.a * *self.b)
     }
 }
 
@@ -58,11 +58,11 @@ impl<ElementType: Mul + Copy> RandomListExpression<ElementType::Output> for Mult
     }
 
     fn len(&self) -> ExpressionResult<usize> {
-        Ok(self.l.get()?.len())
+        Ok(self.l.len())
     }
 
     fn eval_element(&self, index: usize) -> ExpressionResult<ElementType::Output> {
-        Ok(self.l.get()?[index] * *self.c.get()?)
+        Ok(self.l[index] * *self.c)
     }
 }
 
@@ -79,9 +79,9 @@ impl SequentialListExpression<i32> for CountList {
 
     fn eval_next(&self, prev: &Vec<i32>) -> ExpressionResult<Option<i32>> {
         if prev.len() == 0 {
-            Ok(Some(*self.start.get()?))
-        } else if (prev.len() as i32) <= (self.end.get()? - self.start.get()?) / self.inc.get()? {
-            Ok(Some(prev[prev.len() - 1] + self.inc.get()?))
+            Ok(Some(*self.start))
+        } else if (prev.len() as i32) <= (*self.end - *self.start) / *self.inc {
+            Ok(Some(prev[prev.len() - 1] + *self.inc))
         } else {
             Ok(None)
         }
