@@ -1,15 +1,15 @@
 use std::ops::Mul;
 
-use crate::error::*;
 use crate::expression::*;
 use crate::list::*;
+use crate::error::OpError;
 
 pub struct Value<ValueType: Clone> {
     pub val : ValueType
 }
 
-impl<ValueType: Clone> Expression<ValueType> for Value<ValueType> {
-    fn eval(&self) -> ExpressionResult<ValueType> {
+impl<ValueType: Clone> Expression<ValueType, OpError> for Value<ValueType> {
+    fn eval(&self) -> Result<ValueType, OpError> {
         Ok(self.val.clone())
     }
 
@@ -21,12 +21,12 @@ pub struct Coefficient<ValueType: Mul + Copy> {
     pub factor: ValueType
 }
 
-impl<ValueType: Mul + Copy> Expression<ValueType::Output> for Coefficient<ValueType> {
+impl<ValueType: Mul + Copy> Expression<ValueType::Output, OpError> for Coefficient<ValueType> {
     fn terms(&self) -> Terms {
         vec!(self.operand.term())
     }
 
-    fn eval(&self) -> ExpressionResult<ValueType::Output> {
+    fn eval(&self) -> Result<<ValueType as Mul>::Output, OpError> {
         let result = *self.operand * self.factor;
         Ok(result)
     }
@@ -37,12 +37,12 @@ pub struct Multiply<ValueType: Mul + Copy> {
     pub b: TypedTerm<ValueType>
 }
 
-impl<ValueType: Mul + Copy> Expression<ValueType::Output> for Multiply<ValueType> {
+impl<ValueType: Mul + Copy> Expression<ValueType::Output, OpError> for Multiply<ValueType> {
     fn terms(&self) -> Terms {
         vec!(self.a.term(), self.b.term())
     }
 
-    fn eval(&self) -> ExpressionResult<ValueType::Output> {
+    fn eval(&self) -> Result<<ValueType as Mul>::Output, OpError> {
         Ok(*self.a * *self.b)
     }
 }
@@ -52,16 +52,16 @@ pub struct MultiplyListScalar<ElementType: Mul + Copy> {
     pub c: TypedTerm<ElementType>
 }
 
-impl<ElementType: Mul + Copy> RandomListExpression<ElementType::Output> for MultiplyListScalar<ElementType> {
+impl<ElementType: Mul + Copy> RandomListExpression<ElementType::Output, OpError> for MultiplyListScalar<ElementType> {
     fn terms(&self) -> Terms {
         vec!(self.l.term(), self.c.term())
     }
 
-    fn len(&self) -> ExpressionResult<usize> {
-        Ok(self.l.len())
+    fn len(&self) -> usize {
+        self.l.len()
     }
 
-    fn eval_element(&self, index: usize) -> ExpressionResult<ElementType::Output> {
+    fn eval_element(&self, index: usize) -> Result<<ElementType as Mul>::Output, OpError> {
         Ok(self.l[index] * *self.c)
     }
 }
@@ -72,12 +72,12 @@ pub struct CountList {
     pub inc: TypedTerm<i32>
 }
 
-impl SequentialListExpression<i32> for CountList {
+impl SequentialListExpression<i32, OpError> for CountList {
     fn terms(&self) -> Terms {
         vec!(self.start.term(), self.end.term(), self.inc.term())
     }
 
-    fn eval_next(&self, prev: &Vec<i32>) -> ExpressionResult<Option<i32>> {
+    fn eval_next(&self, prev: &Vec<i32>) -> Result<Option<i32>, OpError> {
         if prev.len() == 0 {
             Ok(Some(*self.start))
         } else if (prev.len() as i32) <= (*self.end - *self.start) / *self.inc {

@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate failure;
 extern crate worm_cell;
 
 pub mod error;

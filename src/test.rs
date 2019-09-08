@@ -2,10 +2,11 @@
 mod tests {
     use crate::engine::*;
     use crate::ops::*;
+    use crate::error::*;
 
     #[test]
     fn two_term() {
-        let mut engine = Engine::new();
+        let mut engine = Engine::<OpError>::new();
 
         let term1 = engine.term(Value{ val: 5 });
         let term2 = engine.term(Coefficient{ operand: term1, factor: 2 });
