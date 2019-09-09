@@ -26,7 +26,8 @@ impl fmt::Display for EngineError {
 }
 
 #[derive(Debug)]
-pub enum ExpressionError<EvalError: error::Error + 'static> {
+pub enum ExpressionError<EvalError>
+where EvalError: error::Error + 'static {
     Engine(EngineError),
     Eval(EvalError)
 }
