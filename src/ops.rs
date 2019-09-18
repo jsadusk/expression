@@ -8,8 +8,8 @@ pub struct Value<ValueType: Clone> {
     pub val : ValueType
 }
 
-impl<ValueType: Clone> Expression<ValueType, OpError> for Value<ValueType> {
-    fn eval(&self) -> Result<ValueType, OpError> {
+impl<ValueType: Clone> Expression<ValueType, ()> for Value<ValueType> {
+    fn eval(&self) -> Result<ValueType, ()> {
         Ok(self.val.clone())
     }
 

@@ -3,6 +3,7 @@ use worm_cell::{WormCell, WormCellReader};
 
 use std::ops::Deref;
 use std::marker::PhantomData;
+use std::convert::Into;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Term(pub(crate) usize);
@@ -20,10 +21,10 @@ pub trait Expression<ValueType, ErrorType> {
 
 pub type Terms = Vec<Term>;
 
-pub(crate)struct TypedExpressionCache<ResultType, ErrorType, Expr: Expression<ResultType, ErrorType>> {
+pub(crate)struct TypedExpressionCache<ResultType, ExprErrorType, Expr: Expression<ResultType, ExprErrorType>> {
     pub expr: Expr,
     pub result: WormCell<ResultType>,
-    pub _e: PhantomData<ErrorType>
+    pub _e: PhantomData<ExprErrorType>
 
 }
 
@@ -33,16 +34,16 @@ pub(crate) trait ExpressionCache<EvalErrorType: std::error::Error + 'static> {
     fn eval(&mut self) -> ExpressionResult<(), EvalErrorType>;
 }
 
-impl<ResultType, ErrorType: std::error::Error + 'static, Expr: Expression<ResultType, ErrorType>> ExpressionCache<ErrorType> for TypedExpressionCache<ResultType, ErrorType, Expr> {
+impl<ResultType, EvalErrorType: std::error::Error + 'static, ExprErrorType: Into<EvalErrorType> + 'static, Expr: Expression<ResultType, ExprErrorType>> ExpressionCache<EvalErrorType> for TypedExpressionCache<ResultType, ExprErrorType, Expr> {
 
     fn terms(&self) -> Terms {
         self.expr.terms()
     }
 
-    fn eval(&mut self) -> Result<(), ExpressionError<ErrorType>> {
+    fn eval(&mut self) -> Result<(), ExpressionError<EvalErrorType>> {
         match self.expr.eval() {
-            Ok(val) => self.result.set(val).map_err(|e| ExpressionError::<ErrorType>::Engine(EngineError::DoubleCalc(e))),
-            Err(e) => Err(ExpressionError::<ErrorType>::Eval(e))
+            Ok(val) => self.result.set(val).map_err(|e| ExpressionError::<EvalErrorType>::Engine(EngineError::DoubleCalc(e))),
+            Err(e) => Err(ExpressionError::<EvalErrorType>::Eval(e.into()))
         }
     }
 

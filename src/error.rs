@@ -69,5 +69,11 @@ impl fmt::Display for OpError {
     }
 }
 
+impl From<()> for OpError {
+    fn from(_empty: ()) -> OpError {
+        OpError::NeverError
+    }
+}
+
 pub type EngineResult<T> = Result<T, EngineError>;
 pub type ExpressionResult<T, E> = Result<T, ExpressionError<E>>;
