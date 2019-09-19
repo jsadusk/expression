@@ -33,11 +33,11 @@ impl<'a, ErrorType: 'a + std::error::Error + 'static> Engine<'a, ErrorType> {
         term.get().map_err(|e| ExpressionError::<ErrorType>::Engine(e))
     }
 
-    pub fn term<ValueType: 'a, Expr: Expression<ValueType, ErrorType> + 'a>(&mut self, expr: Expr) -> TypedTerm<ValueType> {
+    pub fn term<ValueType: 'a, ExprErrorType: Into<ErrorType> + 'static, Expr: Expression<ValueType, ExprErrorType> + 'a>(&mut self, expr: Expr) -> TypedTerm<ValueType> {
         let expr_cache = Box::new(TypedExpressionCache {
             expr: expr,
             result: WormCell::<ValueType>::new(),
-            _e: PhantomData::<ErrorType>::default()
+            _e: PhantomData::<ExprErrorType>::default()
         });
 
         let term_result = expr_cache.result.reader();
