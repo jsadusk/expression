@@ -1,5 +1,3 @@
-use worm_cell::WormCell;
-
 use crate::error::*;
 use crate::expression::*;
 use crate::list::*;
@@ -33,13 +31,12 @@ impl<'a, ErrorType: 'a + std::error::Error + 'static> Engine<'a, ErrorType> {
         term.get().map_err(|e| ExpressionError::<ErrorType>::Engine(e))
     }
 
-    pub fn term<ValueType: 'a, ExprErrorType: Into<ErrorType> + 'static, Expr: Expression<ValueType, ExprErrorType> + 'a>(&mut self, expr: Expr) -> TypedTerm<ValueType> {
-        let expr_cache = Box::new(TypedExpressionCache {
-            expr: expr,
-            result: WormCell::<ValueType>::new(),
-            _e: PhantomData::<ExprErrorType>::default()
-        });
-
+    pub fn term<Expr>(&mut self, expr: Expr) -> TypedTerm<Expr::ValueType>
+    where
+        Expr: Expression + 'a,
+        ErrorType: From<Expr::ErrorType>
+    {
+        let expr_cache = Box::new(TypedExpressionCache::new(expr));
         let term_result = expr_cache.result.reader();
 
         self.terms.push(expr_cache);
@@ -48,11 +45,21 @@ impl<'a, ErrorType: 'a + std::error::Error + 'static> Engine<'a, ErrorType> {
                     result: term_result}
     }
 
-    pub fn random_list_term<ElementType: 'a, ListExpr: RandomListExpression<ElementType, ErrorType> + 'a>(&mut self, expr: ListExpr) -> TypedTerm<Vec<ElementType>> {
-        self.term(RandomListExpressionWrapper::<ElementType, ErrorType, ListExpr>(expr, PhantomData::<ElementType>::default(), PhantomData::<ErrorType>::default()))
+    pub fn random_list_term<ListExpr>(&mut self, expr: ListExpr) ->
+        TypedTerm<Vec::<ListExpr::ElementType>>
+    where
+        ListExpr: RandomListExpression + 'a,
+        ErrorType: From<ListExpr::ErrorType>
+    {
+        self.term(RandomListExpressionWrapper::<ListExpr>(expr))
     }
 
-    pub fn sequential_list_term<ElementType: 'a, ListExpr: SequentialListExpression<ElementType, ErrorType> + 'a>(&mut self, expr: ListExpr) -> TypedTerm<Vec<ElementType>> {
-        self.term(SequentialListExpressionWrapper::<ElementType, ErrorType, ListExpr>(expr, PhantomData::<ElementType>::default(), PhantomData::<ErrorType>::default()))
+    pub fn sequential_list_term<ListExpr>(&mut self, expr: ListExpr) ->
+        TypedTerm<Vec<ListExpr::ElementType>>
+    where
+        ListExpr: SequentialListExpression + 'a,
+        ErrorType: From<ListExpr::ErrorType>
+    {
+        self.term(SequentialListExpressionWrapper::<ListExpr>(expr))
     }
 }

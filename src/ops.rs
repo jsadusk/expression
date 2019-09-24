@@ -8,8 +8,11 @@ pub struct Value<ValueType: Clone> {
     pub val : ValueType
 }
 
-impl<ValueType: Clone> Expression<ValueType, ()> for Value<ValueType> {
-    fn eval(&self) -> Result<ValueType, ()> {
+impl<ValueType: Clone> Expression for Value<ValueType> {
+    type ValueType = ValueType;
+    type ErrorType = ();
+
+    fn eval(&self) -> Result<Self::ValueType, Self::ErrorType> {
         Ok(self.val.clone())
     }
 
@@ -21,12 +24,15 @@ pub struct Coefficient<ValueType: Mul + Copy> {
     pub factor: ValueType
 }
 
-impl<ValueType: Mul + Copy> Expression<ValueType::Output, OpError> for Coefficient<ValueType> {
+impl<ValueType: Mul + Copy> Expression for Coefficient<ValueType> {
+    type ValueType = ValueType::Output;
+    type ErrorType = OpError;
+
     fn terms(&self) -> Terms {
         vec!(self.operand.term())
     }
 
-    fn eval(&self) -> Result<<ValueType as Mul>::Output, OpError> {
+    fn eval(&self) -> Result<Self::ValueType, OpError> {
         let result = *self.operand * self.factor;
         Ok(result)
     }
@@ -37,12 +43,15 @@ pub struct Multiply<ValueType: Mul + Copy> {
     pub b: TypedTerm<ValueType>
 }
 
-impl<ValueType: Mul + Copy> Expression<ValueType::Output, OpError> for Multiply<ValueType> {
+impl<ValueType: Mul + Copy> Expression for Multiply<ValueType> {
+    type ValueType = ValueType::Output;
+    type ErrorType = OpError;
+
     fn terms(&self) -> Terms {
         vec!(self.a.term(), self.b.term())
     }
 
-    fn eval(&self) -> Result<<ValueType as Mul>::Output, OpError> {
+    fn eval(&self) -> Result<Self::ValueType, OpError> {
         Ok(*self.a * *self.b)
     }
 }
@@ -52,7 +61,10 @@ pub struct MultiplyListScalar<ElementType: Mul + Copy> {
     pub c: TypedTerm<ElementType>
 }
 
-impl<ElementType: Mul + Copy> RandomListExpression<ElementType::Output, OpError> for MultiplyListScalar<ElementType> {
+impl<ElementType: Mul + Copy> RandomListExpression for MultiplyListScalar<ElementType> {
+    type ElementType = ElementType::Output;
+    type ErrorType = OpError;
+
     fn terms(&self) -> Terms {
         vec!(self.l.term(), self.c.term())
     }
@@ -72,7 +84,10 @@ pub struct CountList {
     pub inc: TypedTerm<i32>
 }
 
-impl SequentialListExpression<i32, OpError> for CountList {
+impl SequentialListExpression for CountList {
+    type ElementType = i32;
+    type ErrorType = OpError;
+
     fn terms(&self) -> Terms {
         vec!(self.start.term(), self.end.term(), self.inc.term())
     }

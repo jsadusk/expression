@@ -1,22 +1,26 @@
 use crate::expression::*;
 
-use std::marker::PhantomData;
+pub trait RandomListExpression {
+    type ElementType;
+    type ErrorType;
 
-pub trait RandomListExpression<ElementType, ErrorType=()> {
     fn terms(&self) -> Terms;
     fn len(&self) -> usize;
-    fn eval_element(&self, index: usize) -> Result<ElementType, ErrorType>;
+    fn eval_element(&self, index: usize) -> Result<Self::ElementType, Self::ErrorType>;
 }
 
-pub(crate) struct RandomListExpressionWrapper<ElementType, ErrorType, Expr: RandomListExpression<ElementType, ErrorType>>(pub(crate) Expr, pub(crate) PhantomData<ElementType>, pub(crate) PhantomData<ErrorType>);
+pub(crate) struct RandomListExpressionWrapper<Expr: RandomListExpression>(pub(crate) Expr);
 
-impl<ElementType, ErrorType, Expr: RandomListExpression<ElementType, ErrorType>> Expression<Vec<ElementType>, ErrorType> for RandomListExpressionWrapper<ElementType, ErrorType, Expr> {
+impl<Expr: RandomListExpression> Expression for RandomListExpressionWrapper<Expr> {
+    type ValueType = Vec<Expr::ElementType>;
+    type ErrorType = Expr::ErrorType;
+
     fn terms(&self) -> Terms {
         self.0.terms()
     }
 
-    fn eval(&self) -> Result<Vec<ElementType>, ErrorType> {
-        let mut result =  Vec::<ElementType>::new();
+    fn eval(&self) -> Result<Self::ValueType, Self::ErrorType> {
+        let mut result =  Self::ValueType::new();
 
         for i in 0..self.0.len() {
             result.push(self.0.eval_element(i)?);
@@ -26,20 +30,26 @@ impl<ElementType, ErrorType, Expr: RandomListExpression<ElementType, ErrorType>>
     }
 }
 
-pub trait SequentialListExpression<ElementType, ErrorType=()> {
+pub trait SequentialListExpression {
+    type ElementType;
+    type ErrorType;
+
     fn terms(&self) -> Terms;
-    fn eval_next(&self, prev: &Vec<ElementType>) -> Result<Option<ElementType>, ErrorType>;
+    fn eval_next(&self, prev: &Vec<Self::ElementType>) -> Result<Option<Self::ElementType>, Self::ErrorType>;
 }
 
-pub(crate) struct SequentialListExpressionWrapper<ElementType, ErrorType, Expr: SequentialListExpression<ElementType, ErrorType>>(pub(crate) Expr, pub(crate) PhantomData<ElementType>, pub(crate) PhantomData<ErrorType>);
+pub(crate) struct SequentialListExpressionWrapper<Expr: SequentialListExpression>(pub(crate) Expr);
 
-impl<ElementType, ErrorType, Expr: SequentialListExpression<ElementType, ErrorType>> Expression<Vec<ElementType>, ErrorType> for SequentialListExpressionWrapper<ElementType, ErrorType, Expr> {
+impl<Expr: SequentialListExpression> Expression for SequentialListExpressionWrapper<Expr> {
+    type ValueType = Vec<Expr::ElementType>;
+    type ErrorType = Expr::ErrorType;
+
     fn terms(&self) -> Terms {
         self.0.terms()
     }
 
-    fn eval(&self) -> Result<Vec<ElementType>, ErrorType> {
-        let mut result =  Vec::<ElementType>::new();
+    fn eval(&self) -> Result<Self::ValueType, Self::ErrorType> {
+        let mut result =  Self::ValueType::new();
 
         let mut maybe_elem = self.0.eval_next(&result)?;
 

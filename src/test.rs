@@ -17,7 +17,7 @@ mod tests {
 
     #[test]
     fn three_term_triangle() {
-        let mut engine = Engine::new();
+        let mut engine = Engine::<OpError>::new();
 
         let val_a = engine.term(Value{ val: 5 });
         let val_b = engine.term(Value{ val: 4 });
@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn three_term_linear() {
-        let mut engine = Engine::new();
+        let mut engine = Engine::<OpError>::new();
 
         let val = engine.term(Value{ val: 5 });
         let coef_a = engine.term(Coefficient{ operand: val, factor: 4 });
@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn four_term_diamond() {
-        let mut engine = Engine::new();
+        let mut engine = Engine::<OpError>::new();
 
         let val = engine.term(Value{ val: 5 });
         let coef_a = engine.term(Coefficient{ operand: val, factor: 4 });
@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn random_list_expr() {
-        let mut engine = Engine::new();
+        let mut engine = Engine::<OpError>::new();
 
         let list = engine.term(Value { val: vec!(0, 1, 2, 3) });
         let val = engine.term(Value { val: 5 });
@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn sequential_list_expr() {
-        let mut engine = Engine::new();
+        let mut engine = Engine::<OpError>::new();
 
         let start = engine.term(Value { val: 0 });
         let end = engine.term(Value { val: 10 });

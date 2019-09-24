@@ -2,7 +2,6 @@ use crate::error::*;
 use worm_cell::{WormCell, WormCellReader};
 
 use std::ops::Deref;
-use std::marker::PhantomData;
 use std::convert::Into;
 
 #[derive(Debug, Copy, Clone)]
@@ -14,18 +13,27 @@ pub struct TypedTerm<ResultType> {
     pub(crate) result: WormCellReader<ResultType>
 }
 
-pub trait Expression<ValueType, ErrorType> {
+pub trait Expression {
+    type ValueType;
+    type ErrorType;
+
     fn terms(&self) -> Terms;
-    fn eval(&self) -> Result<ValueType, ErrorType>;
+    fn eval(&self) -> Result<Self::ValueType, Self::ErrorType>;
 }
 
 pub type Terms = Vec<Term>;
 
-pub(crate)struct TypedExpressionCache<ResultType, ExprErrorType, Expr: Expression<ResultType, ExprErrorType>> {
+pub(crate)struct TypedExpressionCache<Expr: Expression> {
     pub expr: Expr,
-    pub result: WormCell<ResultType>,
-    pub _e: PhantomData<ExprErrorType>
+    pub result: WormCell<Expr::ValueType>,
+}
 
+impl<Expr: Expression> TypedExpressionCache<Expr> {
+    pub fn new(expr: Expr) -> Self {
+        TypedExpressionCache::<Expr> {
+            expr: expr,
+            result: WormCell::<Expr::ValueType>::new() }
+    }
 }
 
 pub(crate) trait ExpressionCache<EvalErrorType: std::error::Error + 'static> {
@@ -34,8 +42,11 @@ pub(crate) trait ExpressionCache<EvalErrorType: std::error::Error + 'static> {
     fn eval(&mut self) -> ExpressionResult<(), EvalErrorType>;
 }
 
-impl<ResultType, EvalErrorType: std::error::Error + 'static, ExprErrorType: Into<EvalErrorType> + 'static, Expr: Expression<ResultType, ExprErrorType>> ExpressionCache<EvalErrorType> for TypedExpressionCache<ResultType, ExprErrorType, Expr> {
-
+impl<Expr, EvalErrorType> ExpressionCache<EvalErrorType> for TypedExpressionCache<Expr>
+where
+    Expr: Expression,
+    EvalErrorType: std::error::Error + From<Expr::ErrorType> + 'static,
+{
     fn terms(&self) -> Terms {
         self.expr.terms()
     }
@@ -50,7 +61,7 @@ impl<ResultType, EvalErrorType: std::error::Error + 'static, ExprErrorType: Into
     fn evaluated(&self) -> bool {
         self.result.is_set()
     }
- }
+}
 
 
 impl<ResultType> TypedTerm<ResultType> {
