@@ -6,12 +6,16 @@ pub trait RandomListExpression {
 
     fn terms(&self) -> Terms;
     fn len(&self) -> usize;
-    fn eval_element(&self, index: usize) -> Result<Self::ElementType, Self::ErrorType>;
+    fn eval_element(&self, index: usize) ->
+        Result<Self::ElementType, Self::ErrorType>;
 }
 
-pub(crate) struct RandomListExpressionWrapper<Expr: RandomListExpression>(pub(crate) Expr);
+pub(crate) struct RandomListExpressionWrapper<Expr: RandomListExpression>(
+    pub(crate) Expr);
 
-impl<Expr: RandomListExpression> Expression for RandomListExpressionWrapper<Expr> {
+impl<Expr> Expression for RandomListExpressionWrapper<Expr>
+where Expr: RandomListExpression
+{
     type ValueType = Vec<Expr::ElementType>;
     type ErrorType = Expr::ErrorType;
 
@@ -38,9 +42,12 @@ pub trait SequentialListExpression {
     fn eval_next(&self, prev: &Vec<Self::ElementType>) -> Result<Option<Self::ElementType>, Self::ErrorType>;
 }
 
-pub(crate) struct SequentialListExpressionWrapper<Expr: SequentialListExpression>(pub(crate) Expr);
+pub(crate) struct SequentialListExpressionWrapper<Expr: SequentialListExpression>(
+    pub(crate) Expr);
 
-impl<Expr: SequentialListExpression> Expression for SequentialListExpressionWrapper<Expr> {
+impl<Expr> Expression for SequentialListExpressionWrapper<Expr>
+where Expr: SequentialListExpression
+{
     type ValueType = Vec<Expr::ElementType>;
     type ErrorType = Expr::ErrorType;
 

@@ -36,7 +36,9 @@ impl<Expr: Expression> TypedExpressionCache<Expr> {
     }
 }
 
-pub(crate) trait ExpressionCache<EvalErrorType: std::error::Error + 'static> {
+pub(crate) trait ExpressionCache<EvalErrorType>
+where EvalErrorType: std::error::Error + 'static
+{
     fn evaluated(&self) -> bool;
     fn terms(&self) -> Terms;
     fn eval(&mut self) -> ExpressionResult<(), EvalErrorType>;

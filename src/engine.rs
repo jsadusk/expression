@@ -2,16 +2,15 @@ use crate::error::*;
 use crate::expression::*;
 use crate::list::*;
 
-use std::marker::PhantomData;
-
 pub struct Engine<'a, ErrorType> {
     terms: Vec<Box<dyn ExpressionCache<ErrorType> + 'a>>,
-    _e: PhantomData<ErrorType>
 }
 
-impl<'a, ErrorType: 'a + std::error::Error + 'static> Engine<'a, ErrorType> {
+impl<'a, ErrorType> Engine<'a, ErrorType>
+where ErrorType: 'a + std::error::Error + 'static
+{
     pub fn new() -> Engine<'a, ErrorType> {
-        Engine { terms: Vec::new(), _e: PhantomData::<ErrorType>::default() }
+        Engine { terms: Vec::new() }
     }
 
     fn eval_term(&mut self, term: Term) -> Result<(), ExpressionError<ErrorType>> {
