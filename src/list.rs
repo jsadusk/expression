@@ -1,5 +1,30 @@
 use crate::expression::*;
 
+pub trait ListExpression {
+    type ElementType;
+    type ErrorType;
+
+    fn terms(&self) -> Terms;
+    fn eval(&self) -> Result<Vec<Self::ElementType>, Self::ErrorType>;
+}
+
+pub(crate) struct ListExpressionWrapper<Expr: ListExpression>(pub(crate) Expr);
+
+impl<Expr> Expression for ListExpressionWrapper<Expr>
+where Expr: ListExpression
+{
+    type ValueType = Vec<Expr::ElementType>;
+    type ErrorType = Expr::ErrorType;
+
+    fn terms(&self) -> Terms {
+        self.0.terms()
+    }
+
+    fn eval(&self) -> Result<Self::ValueType, Self::ErrorType> {
+        self.0.eval()
+    }
+}
+
 pub trait RandomListExpression {
     type ElementType;
     type ErrorType;
@@ -13,18 +38,18 @@ pub trait RandomListExpression {
 pub(crate) struct RandomListExpressionWrapper<Expr: RandomListExpression>(
     pub(crate) Expr);
 
-impl<Expr> Expression for RandomListExpressionWrapper<Expr>
+impl<Expr> ListExpression for RandomListExpressionWrapper<Expr>
 where Expr: RandomListExpression
 {
-    type ValueType = Vec<Expr::ElementType>;
+    type ElementType = Expr::ElementType;
     type ErrorType = Expr::ErrorType;
 
     fn terms(&self) -> Terms {
         self.0.terms()
     }
 
-    fn eval(&self) -> Result<Self::ValueType, Self::ErrorType> {
-        let mut result =  Self::ValueType::new();
+    fn eval(&self) -> Result<Vec<Self::ElementType>, Self::ErrorType> {
+        let mut result =  Vec::<Self::ElementType>::new();
 
         for i in 0..self.0.len() {
             result.push(self.0.eval_element(i)?);
@@ -68,3 +93,4 @@ where Expr: SequentialListExpression
         Ok(result)
     }
 }
+

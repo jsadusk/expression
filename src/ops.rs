@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::ops::{Mul, Index};
 
 use crate::expression::*;
 use crate::list::*;
@@ -19,13 +19,34 @@ impl<ValueType: Clone> Expression for Value<ValueType> {
     fn terms(&self) -> Vec<Term> { Vec::<Term>::new() }
 }
 
-pub struct Coefficient<ValueType: Mul + Copy> {
-    pub operand: TypedTerm<ValueType>,
-    pub factor: ValueType
+pub struct ListValue<ElementType> {
+    pub val : Vec<ElementType>
 }
 
-impl<ValueType: Mul + Copy> Expression for Coefficient<ValueType> {
-    type ValueType = ValueType::Output;
+impl<ElementType: Clone> ListExpression for ListValue<ElementType> {
+    type ElementType = ElementType;
+    type ErrorType = ();
+
+    fn eval(&self) -> Result<Vec<Self::ElementType>, Self::ErrorType> {
+        Ok(self.val.clone())
+    }
+
+    fn terms(&self) -> Vec<Term> { Vec::<Term>::new() }
+}
+
+pub struct Coefficient<T>
+    where T: TypedTerm
+{
+    pub operand: TermResult<T>,
+    pub factor: T::ValueType
+}
+
+impl<T> Expression for Coefficient<T>
+where
+    T: TypedTerm,
+    T::ValueType: Copy + Mul,
+{
+    type ValueType = <T::ValueType as Mul>::Output;
     type ErrorType = OpError;
 
     fn terms(&self) -> Terms {
@@ -38,13 +59,19 @@ impl<ValueType: Mul + Copy> Expression for Coefficient<ValueType> {
     }
 }
 
-pub struct Multiply<ValueType: Mul + Copy> {
-    pub a: TypedTerm<ValueType>,
-    pub b: TypedTerm<ValueType>
+pub struct Multiply<T, U> {
+    pub a: TermResult<T>,
+    pub b: TermResult<U>
 }
 
-impl<ValueType: Mul + Copy> Expression for Multiply<ValueType> {
-    type ValueType = ValueType::Output;
+impl<T, U> Expression for Multiply<T, U>
+where
+    T: TypedTerm,
+    U: TypedTerm,
+    T::ValueType: Mul + Copy + Mul<U::ValueType>,
+    U::ValueType: Copy
+{
+    type ValueType = <T::ValueType as std::ops::Mul<U::ValueType>>::Output;
     type ErrorType = OpError;
 
     fn terms(&self) -> Terms {
@@ -56,13 +83,22 @@ impl<ValueType: Mul + Copy> Expression for Multiply<ValueType> {
     }
 }
 
-pub struct MultiplyListScalar<ElementType: Mul + Copy> {
-    pub l: TypedTerm<Vec<ElementType>>,
-    pub c: TypedTerm<ElementType>
+pub struct MultiplyListScalar<L, T>
+{
+    pub l: TermListResult<L>,
+    pub c: TermResult<T>
 }
 
-impl<ElementType: Mul + Copy> RandomListExpression for MultiplyListScalar<ElementType> {
-    type ElementType = ElementType::Output;
+impl<L, T> RandomListExpression for MultiplyListScalar<L, T>
+where
+    L: ListTerm,
+    T: TypedTerm<ValueType=L::ElementType>,
+    L::ElementType: Mul + Copy + Mul<T::ValueType>,
+    T::ValueType: Copy,
+    L::ValueType: Index<usize>,
+    <<L as TypedTerm>::ValueType as Index<usize>>::Output: Copy + Mul + Mul<T::ValueType>
+{
+    type ElementType = <<<L as TypedTerm>::ValueType as Index<usize>>::Output as Mul<<L as ListTerm>::ElementType>>::Output;
     type ErrorType = OpError;
 
     fn terms(&self) -> Terms {
@@ -73,18 +109,24 @@ impl<ElementType: Mul + Copy> RandomListExpression for MultiplyListScalar<Elemen
         self.l.len()
     }
 
-    fn eval_element(&self, index: usize) -> Result<<ElementType as Mul>::Output, OpError> {
+    fn eval_element(&self, index: usize) -> Result<Self::ElementType, OpError> {
         Ok(self.l[index] * *self.c)
     }
 }
 
-pub struct CountList {
-    pub start: TypedTerm<i32>,
-    pub end: TypedTerm<i32>,
-    pub inc: TypedTerm<i32>
+pub struct CountList<S, E, I>
+{
+    pub start: TermResult<S>,
+    pub end: TermResult<E>,
+    pub inc: TermResult<I>
 }
 
-impl SequentialListExpression for CountList {
+impl<S, E, I> SequentialListExpression for CountList<S, E, I>
+where
+    S: TypedTerm<ValueType=i32>,
+    E: TypedTerm<ValueType=i32>,
+    I: TypedTerm<ValueType=i32>,
+{
     type ElementType = i32;
     type ErrorType = OpError;
 
@@ -102,3 +144,4 @@ impl SequentialListExpression for CountList {
         }
     }
 }
+

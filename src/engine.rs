@@ -25,12 +25,13 @@ where ErrorType: 'a + std::error::Error + 'static
         }
     }
 
-    pub fn eval<'b, ValueType>(&mut self, term: &'b TypedTerm<ValueType>) -> Result<&'b ValueType, ExpressionError<ErrorType>> {
+    pub fn eval<'b, TermType>(&mut self, term: &'b TermType) -> Result<&'b TermType::ValueType, ExpressionError<ErrorType>>
+    where TermType: TypedTerm {
         self.eval_term(term.term())?;
         term.get().map_err(|e| ExpressionError::<ErrorType>::Engine(e))
     }
 
-    pub fn term<Expr>(&mut self, expr: Expr) -> TypedTerm<Expr::ValueType>
+    pub fn term<Expr>(&mut self, expr: Expr) -> TypedTermImpl<Expr::ValueType>
     where
         Expr: Expression + 'a,
         ErrorType: From<Expr::ErrorType>
@@ -40,21 +41,30 @@ where ErrorType: 'a + std::error::Error + 'static
 
         self.terms.push(expr_cache);
 
-        TypedTerm { term: Term(self.terms.len() - 1),
+        TypedTermImpl { term: Term(self.terms.len() - 1),
                     result: term_result}
     }
 
+    pub fn list_term<ListExpr>(&mut self, expr: ListExpr) ->
+        ListTermImpl<ListExpr::ElementType>
+    where
+        ListExpr: ListExpression + 'a,
+        ErrorType: From<ListExpr::ErrorType>
+    {
+        ListTermImpl::<ListExpr::ElementType>(self.term(ListExpressionWrapper::<ListExpr>(expr)))
+    }
+
     pub fn random_list_term<ListExpr>(&mut self, expr: ListExpr) ->
-        TypedTerm<Vec::<ListExpr::ElementType>>
+        ListTermImpl<ListExpr::ElementType>
     where
         ListExpr: RandomListExpression + 'a,
         ErrorType: From<ListExpr::ErrorType>
     {
-        self.term(RandomListExpressionWrapper::<ListExpr>(expr))
+        self.list_term(RandomListExpressionWrapper::<ListExpr>(expr))
     }
 
     pub fn sequential_list_term<ListExpr>(&mut self, expr: ListExpr) ->
-        TypedTerm<Vec<ListExpr::ElementType>>
+        TypedTermImpl<Vec<ListExpr::ElementType>>
     where
         ListExpr: SequentialListExpression + 'a,
         ErrorType: From<ListExpr::ErrorType>
