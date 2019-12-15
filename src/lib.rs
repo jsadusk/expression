@@ -4,6 +4,7 @@ pub mod error;
 pub mod engine;
 pub mod expression;
 pub mod list;
+pub mod simple_engine;
 pub mod ops;
 mod test;
 
