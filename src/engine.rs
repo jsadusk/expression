@@ -22,8 +22,11 @@ pub trait Engine<'a> {
     fn random_list_term<ListExpr>(&mut self, expr: ListExpr) ->
         ListTermImpl<ListExpr::ElementType>
     where
-        ListExpr: RandomListExpression + 'a,
-        Self::ErrorType: From<ListExpr::ErrorType>;
+        ListExpr: RandomListExpression + Sync + 'a,
+        ListExpr::ElementSetup: Sync,
+        ListExpr::ElementType: Send,
+        ListExpr::ErrorType: Send,
+        Self::ErrorType: From<ListExpr::ErrorType> + Send;
 
     fn sequential_list_term<ListExpr>(&mut self, expr: ListExpr) ->
         TypedTermImpl<Vec<ListExpr::ElementType>>

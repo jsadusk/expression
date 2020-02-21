@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 worm_cell = { path = "../worm_cell" }
+rayon = "1.2.1"

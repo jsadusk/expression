@@ -1,26 +1,20 @@
 use std::error;
 use std::fmt;
+use worm_cell::error::WormCellError;
 
 #[derive(Debug)]
 pub enum EngineError {
-    GetNotCalculated(worm_cell::WormCellError),
-    DoubleCalc(worm_cell::WormCellError),
+    GetNotCalculated,
+    DoubleCalc
 }
 
-impl error::Error for EngineError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            EngineError::GetNotCalculated(wce) => Some(wce),
-            EngineError::DoubleCalc(wce) => Some(wce)
-        }
-    }
-}
+impl error::Error for EngineError {}
 
 impl fmt::Display for EngineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EngineError::GetNotCalculated(wce) => write!(f, "Tried to get() a result that has not been calculated: {}", wce),
-            EngineError::DoubleCalc(wce) => write!(f, "Tried to calculate a result that has already been calculated {}", wce)
+            EngineError::GetNotCalculated => write!(f, "Tried to get() a result that has not been calculated"),
+            EngineError::DoubleCalc => write!(f, "Tried to calculate a result that has already been calculated")
         }
     }
 }
@@ -56,6 +50,12 @@ impl<EvalError: error::Error + 'static> From<EngineError> for ExpressionError<Ev
     }
 }
 
+impl<EvalError: error::Error + 'static> From<WormCellError> for ExpressionError<EvalError> {
+    fn from(orig: WormCellError) -> Self {
+        Self::Engine(orig.into())
+    }
+}
+
 #[derive(Debug)]
 pub enum OpError {
     NeverError
@@ -75,5 +75,15 @@ impl From<()> for OpError {
     }
 }
 
+impl From<WormCellError> for EngineError {
+    fn from(cause: WormCellError) -> EngineError {
+        match cause {
+            WormCellError::ReadNotSet => EngineError::GetNotCalculated,
+            WormCellError::DoubleSet => EngineError::DoubleCalc
+        }
+    }
+}
+
+    
 pub type EngineResult<T> = Result<T, EngineError>;
 pub type ExpressionResult<T, E> = Result<T, ExpressionError<E>>;

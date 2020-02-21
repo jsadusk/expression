@@ -2,6 +2,7 @@ use crate::error::*;
 use crate::engine::*;
 use crate::expression::*;
 use crate::list::*;
+use worm_cell::AtomicWormCellReader;
 
 pub struct SimpleEngine<'a, ErrorType> {
     terms: Vec<Box<dyn ExpressionCache<ErrorType> + 'a>>,
@@ -36,7 +37,7 @@ where ET: 'a + std::error::Error + 'static
     fn eval<'b, TermType>(&mut self, term: &'b TermType) -> Result<&'b TermType::ValueType, ExpressionError<Self::ErrorType>>
     where TermType: TypedTerm {
         self.eval_term(term.term())?;
-        term.get().map_err(|e| ExpressionError::<Self::ErrorType>::Engine(e))
+        term.try_get().map_err(|e| ExpressionError::<Self::ErrorType>::Engine(e))
     }
 
     fn term<Expr>(&mut self, expr: Expr) -> TypedTermImpl<Expr::ValueType>
@@ -45,12 +46,12 @@ where ET: 'a + std::error::Error + 'static
         Self::ErrorType: From<Expr::ErrorType>
     {
         let expr_cache = Box::new(TypedExpressionCache::new(expr));
-        let term_result = expr_cache.result.reader();
+        let term_result = AtomicWormCellReader::new(expr_cache.result.clone());
 
         self.terms.push(expr_cache);
 
         TypedTermImpl { term: Term(self.terms.len() - 1),
-                    result: term_result}
+                        result: term_result}
     }
 
     fn list_term<ListExpr>(&mut self, expr: ListExpr) ->
@@ -65,7 +66,10 @@ where ET: 'a + std::error::Error + 'static
     fn random_list_term<ListExpr>(&mut self, expr: ListExpr) ->
         ListTermImpl<ListExpr::ElementType>
     where
-        ListExpr: RandomListExpression + 'a,
+        ListExpr: RandomListExpression + Sync + 'a,
+        ListExpr::ElementSetup: Sync,
+        ListExpr::ElementType: Send,
+        ListExpr::ErrorType: Send,
         Self::ErrorType: From<ListExpr::ErrorType>
     {
         self.list_term(RandomListExpressionWrapper::<ListExpr>(expr))

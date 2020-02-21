@@ -1,4 +1,5 @@
 use crate::expression::*;
+use rayon::prelude::*;
 
 pub trait ListExpression {
     type ElementType;
@@ -28,10 +29,13 @@ where Expr: ListExpression
 pub trait RandomListExpression {
     type ElementType;
     type ErrorType;
+    type ElementSetup;
 
     fn terms(&self) -> Terms;
     fn len(&self) -> usize;
-    fn eval_element(&self, index: usize) ->
+    fn setup_element(&self, index: usize) ->
+        Result<Self::ElementSetup,Self::ErrorType>;
+    fn eval_element(&self, setup: &Self::ElementSetup) ->
         Result<Self::ElementType, Self::ErrorType>;
 }
 
@@ -39,7 +43,11 @@ pub(crate) struct RandomListExpressionWrapper<Expr: RandomListExpression>(
     pub(crate) Expr);
 
 impl<Expr> ListExpression for RandomListExpressionWrapper<Expr>
-where Expr: RandomListExpression
+where
+    Expr: RandomListExpression + Sync,
+    Expr::ElementSetup: Sync,
+    Expr::ElementType: Send,
+    Expr::ErrorType: Send
 {
     type ElementType = Expr::ElementType;
     type ErrorType = Expr::ErrorType;
@@ -49,13 +57,18 @@ where Expr: RandomListExpression
     }
 
     fn eval(&self) -> Result<Vec<Self::ElementType>, Self::ErrorType> {
-        let mut result =  Vec::<Self::ElementType>::new();
+        let indices = 0..self.0.len();
 
-        for i in 0..self.0.len() {
-            result.push(self.0.eval_element(i)?);
-        }
-
-        Ok(result)
+        let setups: Result<Vec<Expr::ElementSetup>, Self::ErrorType> = indices
+            .into_iter()
+            .map(|i| self.0.setup_element(i))
+            .collect();
+        let setups = setups?;
+        
+        setups
+            .into_par_iter()
+            .map(|s| self.0.eval_element(s))
+            .collect()
     }
 }
 

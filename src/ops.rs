@@ -100,6 +100,7 @@ where
 {
     type ElementType = <<<L as TypedTerm>::ValueType as Index<usize>>::Output as Mul<<L as ListTerm>::ElementType>>::Output;
     type ErrorType = OpError;
+    type ElementSetup = <L::ValueType as Index<usize>>::Output;
 
     fn terms(&self) -> Terms {
         vec!(self.l.term(), self.c.term())
@@ -109,8 +110,12 @@ where
         self.l.len()
     }
 
-    fn eval_element(&self, index: usize) -> Result<Self::ElementType, OpError> {
-        Ok(self.l[index] * *self.c)
+    fn setup_element(&self, index: usize) -> Result<Self::ElementSetup, OpError> {
+        Ok(self.l[index])
+    }
+
+    fn eval_element(&self, list_elem: &Self::ElementSetup) -> Result<Self::ElementType, OpError> {
+        Ok(*list_elem * *self.c)
     }
 }
 

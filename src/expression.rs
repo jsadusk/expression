@@ -1,8 +1,9 @@
 use crate::error::*;
-use worm_cell::{WormCell, WormCellReader};
 
+use std::sync::Arc;
 use std::convert::Into;
 use std::ops::{Deref, Index};
+use worm_cell::{AtomicWormCell, AtomicWormCellReader};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Term(pub(crate) usize);
@@ -10,7 +11,7 @@ pub struct Term(pub(crate) usize);
 #[derive(Debug, Clone)]
 pub struct TypedTermImpl<ResultType> {
     pub(crate) term: Term,
-    pub(crate) result: WormCellReader<ResultType>,
+    pub(crate) result: AtomicWormCellReader<ResultType>,
 }
 
 pub trait Expression {
@@ -23,16 +24,18 @@ pub trait Expression {
 
 pub type Terms = Vec<Term>;
 
-pub(crate) struct TypedExpressionCache<Expr: Expression> {
+pub(crate) struct TypedExpressionCache<Expr: Expression>
+{
     pub expr: Expr,
-    pub result: WormCell<Expr::ValueType>,
+    pub result: Arc<AtomicWormCell<Expr::ValueType>>
 }
 
-impl<Expr: Expression> TypedExpressionCache<Expr> {
+impl<Expr: Expression> TypedExpressionCache<Expr>
+{
     pub fn new(expr: Expr) -> Self {
         TypedExpressionCache::<Expr> {
             expr: expr,
-            result: WormCell::<Expr::ValueType>::new(),
+            result: Arc::new(AtomicWormCell::<Expr::ValueType>::new())
         }
     }
 }
@@ -57,10 +60,7 @@ where
 
     fn eval(&mut self) -> Result<(), ExpressionError<EvalErrorType>> {
         match self.expr.eval() {
-            Ok(val) => self
-                .result
-                .set(val)
-                .map_err(|e| ExpressionError::<EvalErrorType>::Engine(EngineError::DoubleCalc(e))),
+            Ok(val) => Ok(self.result.try_set(val)?),
             Err(e) => Err(ExpressionError::<EvalErrorType>::Eval(e.into())),
         }
     }
@@ -72,15 +72,20 @@ where
 
 pub trait TypedTerm {
     type ValueType;
-    fn get(&self) -> EngineResult<&Self::ValueType>;
+    fn get(&self) -> &Self::ValueType;
+    fn try_get(&self) -> EngineResult<&Self::ValueType>;
     fn term(&self) -> Term;
 }
 
 impl<ResultType> TypedTerm for TypedTermImpl<ResultType> {
     type ValueType = ResultType;
 
-    fn get(&self) -> EngineResult<&ResultType> {
-        self.result.get().map_err(EngineError::GetNotCalculated)
+    fn get(&self) -> &Self::ValueType {
+        self.result.get()
+    }
+
+    fn try_get(&self) -> EngineResult<&Self::ValueType> {
+        Ok(self.result.try_get()?)
     }
 
     fn term(&self) -> Term {
@@ -93,13 +98,20 @@ pub struct ListTermImpl<ElementType>(pub(crate) TypedTermImpl<Vec<ElementType>>)
 
 pub trait ListTerm : TypedTerm {
     type ElementType;
-    fn len(&self) -> EngineResult<usize>;
+    fn try_len(&self) -> EngineResult<usize>;
+    fn len(&self) -> usize;
+    fn iter(&self) -> std::slice::Iter<Self::ElementType>;
 }
 
 impl<ElementType> TypedTerm for ListTermImpl<ElementType> {
     type ValueType = Vec<ElementType>;
-    fn get(&self) -> EngineResult<&Vec<ElementType>> {
+    
+    fn get(&self) -> &Self::ValueType {
         self.0.get()
+    }
+
+    fn try_get(&self) -> EngineResult<&Self::ValueType> {
+        self.0.try_get()
     }
 
     fn term(&self) -> Term {
@@ -109,8 +121,17 @@ impl<ElementType> TypedTerm for ListTermImpl<ElementType> {
 
 impl<ElementType> ListTerm for ListTermImpl<ElementType> {
     type ElementType = ElementType;
-    fn len(&self) -> EngineResult<usize> {
-        Ok(self.get()?.len())
+
+    fn len(&self) -> usize {
+        self.get().len()
+    }
+
+    fn try_len(&self) -> EngineResult<usize> {
+        Ok(self.try_get()?.len())
+    }
+
+    fn iter(&self) -> std::slice::Iter<Self::ElementType> {
+        self.get().iter()
     }
 }
 
@@ -120,8 +141,12 @@ impl<TermImpl> TermResult<TermImpl>
 where
     TermImpl: TypedTerm,
 {
-    pub fn get(&self) -> EngineResult<&TermImpl::ValueType> {
+    pub fn get(&self) -> &TermImpl::ValueType {
         self.0.get()
+    }
+
+    pub fn try_get(&self) -> EngineResult<&TermImpl::ValueType> {
+        self.0.try_get()
     }
 
     pub fn term(&self) -> Term {
@@ -136,7 +161,7 @@ where
     type Target = TermImpl::ValueType;
 
     fn deref(&self) -> &Self::Target {
-        self.get().unwrap()
+        self.get()
     }
 }
 
@@ -152,7 +177,11 @@ impl<TermImpl> TermListResult<TermImpl>
 where
     TermImpl: ListTerm,
 {
-    pub fn get(&self) -> EngineResult<&TermImpl::ValueType> {
+    pub fn try_get(&self) -> EngineResult<&TermImpl::ValueType> {
+        self.0.try_get()
+    }
+
+    pub fn get(&self) -> &TermImpl::ValueType {
         self.0.get()
     }
 
@@ -161,7 +190,15 @@ where
     }
 
     pub fn len(&self) -> usize {
-        self.0.len().unwrap()
+        self.0.len()
+    }
+
+    pub fn try_len(&self) -> EngineResult<usize> {
+        self.0.try_len()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<TermImpl::ElementType> {
+        self.0.iter()
     }
 }
 
@@ -178,7 +215,7 @@ where
     type Target = TermImpl::ValueType;
 
     fn deref(&self) -> &Self::Target {
-        self.get().unwrap()
+        self.get()
     }
 }
 
@@ -192,6 +229,6 @@ where
     type Output = <TermImpl::ValueType as Index<usize>>::Output;
 
     fn index(&self, i: usize) -> &Self::Output {
-        &self.get().unwrap()[i]
+        &self.get()[i]
     }
 }

@@ -1,4 +1,5 @@
 extern crate worm_cell;
+extern crate rayon;
 
 pub mod error;
 pub mod engine;
