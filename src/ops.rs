@@ -83,13 +83,13 @@ where
     }
 }
 
-pub struct MultiplyListScalar<L, T>
+pub struct MultiplyListScalar<'a, L, T>
 {
     pub l: TermListResult<L>,
-    pub c: TermResult<T>
+    pub c: TermResult<T>,
 }
 
-impl<L, T> RandomListExpression for MultiplyListScalar<L, T>
+impl<'a, L, T> MapExpression for MultiplyListScalar<'a, L, T>
 where
     L: ListTerm,
     T: TypedTerm<ValueType=L::ElementType>,
@@ -100,18 +100,14 @@ where
 {
     type ElementType = <<<L as TypedTerm>::ValueType as Index<usize>>::Output as Mul<<L as ListTerm>::ElementType>>::Output;
     type ErrorType = OpError;
-    type ElementSetup = <L::ValueType as Index<usize>>::Output;
+    type ElementSetup = &'a L::ElementType;
 
     fn terms(&self) -> Terms {
         vec!(self.l.term(), self.c.term())
     }
 
-    fn len(&self) -> usize {
-        self.l.len()
-    }
-
-    fn setup_element(&self, index: usize) -> Result<Self::ElementSetup, OpError> {
-        Ok(self.l[index])
+    fn setup(&self) -> Result<Vec<Self::ElementSetup>, OpError> {
+        Ok(self.setup_iter(self.l.iter()))
     }
 
     fn eval_element(&self, list_elem: &Self::ElementSetup) -> Result<Self::ElementType, OpError> {

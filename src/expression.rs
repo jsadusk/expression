@@ -5,6 +5,7 @@ use std::convert::Into;
 use std::ops::{Deref, Index};
 use worm_cell::{AtomicWormCell, AtomicWormCellReader};
 
+/*
 #[derive(Debug, Copy, Clone)]
 pub struct Term(pub(crate) usize);
 
@@ -13,7 +14,7 @@ pub struct TypedTermImpl<ResultType> {
     pub(crate) term: Term,
     pub(crate) result: AtomicWormCellReader<ResultType>,
 }
-
+*/
 pub trait Expression {
     type ValueType;
     type ErrorType;
